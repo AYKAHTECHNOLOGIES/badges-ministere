@@ -1,0 +1,15 @@
+APPLICATION BADGES – MINISTÈRE DE L'ÉNERGIE
+===========================================
+
+Installation sur le téléphone
+1. Copiez le dossier "badges" sur votre hébergement web en HTTPS
+   (par exemple https://votre-site.com/badges/).
+2. Sur le téléphone, ouvrez cette adresse dans Chrome.
+3. Menu ⋮ > « Ajouter à l'écran d'accueil » (ou « Installer l'application »).
+4. L'application fonctionne ensuite sans connexion internet.
+
+Sur l'ordinateur (test) : ouvrez http://localhost/badges/ avec WAMP.
+(L'installation sur le téléphone exige une adresse en HTTPS.)
+
+Les données (fiches, photos, signatures) restent dans le téléphone.
+Faites régulièrement « Enregistrer une sauvegarde ».

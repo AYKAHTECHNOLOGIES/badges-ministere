@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b6b2c">
+<title>Badges Ministère</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="img/icon-192.png">
+<link rel="apple-touch-icon" href="img/icon-192.png">
+<style>
+:root{--vert:#0b6b2c;--vert2:#e6f2ea;--orange:#e05206;--ink:#15171a;--mute:#5b6068;--line:#d6d9de;--bg:#f3f4f6}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;padding-bottom:env(safe-area-inset-bottom)}
+header{background:var(--vert);color:#fff;padding:calc(12px + env(safe-area-inset-top)) 16px 12px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:5}
+header img{width:44px;height:32px;object-fit:contain;background:#fff;border-radius:6px;padding:2px}
+header h1{font-size:18px;margin:0;font-weight:600;flex:1}
+header small{display:block;font-weight:400;opacity:.85;font-size:13px}
+main{max-width:760px;margin:0 auto;padding:14px}
+.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
+h2{font-size:17px;margin:4px 0 12px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+button,.btn{font:inherit;border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:10px;min-height:46px;padding:0 16px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px}
+button.p{background:var(--vert);border-color:var(--vert);color:#fff;font-weight:600}
+button.o{background:var(--orange);border-color:var(--orange);color:#fff;font-weight:600}
+button.d{color:#b42318;border-color:#f1c0bb}
+button:disabled{opacity:.5}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #8cc7a0;outline-offset:2px}
+.grow{flex:1}
+label{display:block;font-size:14px;color:var(--mute);margin:10px 0 4px}
+input,select{font:inherit;font-size:16px;width:100%;min-height:46px;border:1px solid var(--line);border-radius:10px;padding:8px 12px;background:#fff}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:0 12px}
+.emp{display:flex;gap:12px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}
+.emp:first-child{border-top:0}
+.emp img,.emp .vide{width:46px;height:58px;object-fit:cover;border-radius:6px;background:#eceef1;flex:none}
+.emp .info{flex:1;min-width:0}
+.emp b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.emp span{font-size:13px;color:var(--mute)}
+.chips{display:flex;gap:6px;margin-top:3px;flex-wrap:wrap}
+.chip{font-size:12px;padding:2px 8px;border-radius:20px;background:#eceef1;color:var(--mute)}
+.chip.ok{background:var(--vert2);color:var(--vert)}
+.emp input[type=checkbox]{width:24px;height:24px;min-height:0;flex:none}
+.vide-liste{color:var(--mute);text-align:center;padding:20px 0}
+.zone{border:1px dashed #a9aeb6;border-radius:12px;padding:12px;text-align:center;background:#fafbfc}
+.damier{background:repeating-conic-gradient(#e9ebee 0 25%,#fff 0 50%) 0 0/16px 16px;border-radius:8px;min-height:90px;display:flex;align-items:center;justify-content:center;padding:8px}
+.damier img{max-width:100%;max-height:140px}
+.crop{position:relative;width:240px;height:320px;margin:0 auto;border-radius:10px;overflow:hidden;background:#222;touch-action:none}
+.crop canvas{width:100%;height:100%;display:block}
+.apercu canvas{width:100%;height:auto;border-radius:12px;box-shadow:0 1px 6px rgba(0,0,0,.18);display:block;margin-bottom:10px;background:#fff}
+.msg{font-size:14px;margin-top:8px}
+.err{color:#b42318}
+.okm{color:var(--vert)}
+.astuce{font-size:13px;color:var(--mute);margin:6px 0 0}
+input[type=range]{min-height:36px;padding:0}
+.cache{display:none!important}
+.barre{position:sticky;bottom:0;background:#fff;border-top:1px solid var(--line);padding:10px 14px calc(10px + env(safe-area-inset-bottom));display:flex;gap:10px;z-index:4}
+.barre button{flex:1}
+dialog{border:0;border-radius:16px;max-width:420px;width:calc(100% - 24px);padding:18px}
+dialog::backdrop{background:rgba(0,0,0,.45)}
+.lien{background:none;border:0;color:var(--vert);text-decoration:underline;min-height:44px;padding:0 4px}
+</style>
+</head>
+<body>
+<header>
+<img src="img/armoiries.png" alt="">
+<h1>Badges du personnel<small id="sousTitre">Ministère de l'Énergie</small></h1>
+</header>
+
+<main id="vueListe">
+<div class="card">
+<div class="row">
+<h2 class="grow" style="margin:0">Employés <span id="nb" style="color:var(--mute);font-weight:400"></span></h2>
+<button class="p" id="btnNouveau">+ Nouvel employé</button>
+</div>
+<input id="recherche" type="search" placeholder="Rechercher un nom, un numéro…" style="margin-top:12px" aria-label="Rechercher">
+<div id="liste" style="margin-top:6px"></div>
+</div>
+
+<div class="card">
+<h2>Exporter pour l'impression</h2>
+<div class="row" style="margin-bottom:8px">
+<button class="lien" id="toutCocher">Tout cocher</button>
+<button class="lien" id="rienCocher">Tout décocher</button>
+<span id="nbCoches" class="astuce" style="margin:0"></span>
+</div>
+<div class="row">
+<button class="o grow" id="expCartes">PDF badges (format carte, recto/verso)</button>
+</div>
+<div class="row" style="margin-top:10px">
+<button class="grow" id="expPlanche">PDF planche A4 (contrôle)</button>
+<button class="grow" id="expCsv">Liste Excel (CSV)</button>
+</div>
+<p class="astuce">Le PDF « format carte » a une page de 85,6 × 54 mm par face : recto puis verso de chaque employé. Ouvrez-le dans le logiciel de l'imprimante à cartes et imprimez en recto-verso.</p>
+<p class="msg" id="msgExport"></p>
+</div>
+
+<div class="card">
+<h2>Sauvegarde et réglages</h2>
+<div class="row">
+<button class="grow" id="btnSauver">Enregistrer une sauvegarde</button>
+<label class="btn grow" style="margin:0;color:var(--ink);font-size:16px">Restaurer une sauvegarde<input type="file" id="fRestaurer" accept=".json,application/json" class="cache"></label>
+</div>
+<p class="astuce">Les données restent sur ce téléphone. Faites une sauvegarde régulièrement, et avant de changer de téléphone.</p>
+<div class="grid2">
+<div><label for="rMinistere">Nom du ministère (sur la carte)</label><input id="rMinistere"></div>
+<div><label for="rVille">Ville</label><input id="rVille"></div>
+<div><label for="rPrefixe">Début des numéros de carte</label><input id="rPrefixe"></div>
+<div><label for="rValid">Durée de validité (années)</label><input id="rValid" type="number" min="1" max="10"></div>
+</div>
+<label style="display:flex;align-items:center;gap:10px;color:var(--ink)"><input type="checkbox" id="rPhoto" style="width:24px;min-height:0;height:24px"> Photo sur le badge</label>
+</div>
+</main>
+
+<main id="vueFiche" class="cache">
+<div class="card">
+<h2 id="titreFiche">Nouvel employé</h2>
+<div class="grid2">
+<div><label for="fNom">Nom</label><input id="fNom" autocomplete="off" autocapitalize="characters"></div>
+<div><label for="fPrenom">Prénom</label><input id="fPrenom" autocomplete="off" autocapitalize="words"></div>
+<div><label for="fFonction">Fonction</label><input id="fFonction" autocomplete="off"></div>
+<div><label for="fNumero">Carte N°</label><input id="fNumero" autocomplete="off"></div>
+<div><label for="fDelivrance">Délivrée le</label><input id="fDelivrance" type="date"></div>
+<div><label for="fValidite">Valable jusqu'au</label><input id="fValidite" type="date"></div>
+<div><label for="fBadge">N° du badge lu par le lecteur (facultatif)</label><input id="fBadge" inputmode="numeric" autocomplete="off"></div>
+</div>
+</div>
+
+<div class="card">
+<h2>Photo de l'employé</h2>
+<div class="zone">
+<div id="cropBox" class="cache">
+<div class="crop" id="crop"><canvas id="cropCv" width="480" height="640"></canvas></div>
+<label for="zoom">Zoom (glissez la photo avec le doigt pour la centrer)</label>
+<input type="range" id="zoom" min="1" max="3" step="0.01" value="1">
+</div>
+<div class="row" style="justify-content:center;margin-top:8px">
+<label class="btn" style="margin:0;color:var(--ink);font-size:16px">Prendre la photo<input type="file" id="fPhoto" accept="image/*" capture="user" class="cache"></label>
+<label class="btn" style="margin:0;color:var(--ink);font-size:16px">Galerie<input type="file" id="fPhotoGal" accept="image/*" class="cache"></label>
+</div>
+<p class="astuce">Visage de face, sur un fond clair.</p>
+</div>
+</div>
+
+<div class="card">
+<h2>Signature de l'employé</h2>
+<div class="zone">
+<div class="damier" id="sigApercu"><span class="astuce">Faites signer l'employé au stylo noir sur une feuille blanche, puis photographiez la signature.</span></div>
+<div id="sigReglages" class="cache">
+<div class="grid2">
+<div><label for="sFinesse">Finesse des traits</label><input type="range" id="sFinesse" min="1" max="9" value="5"></div>
+<div><label for="sForce">Encre plus foncée</label><input type="range" id="sForce" min="80" max="160" value="115"></div>
+</div>
+<div class="row" style="justify-content:center"><button id="sRot">Pivoter ↻</button></div>
+</div>
+<div class="row" style="justify-content:center;margin-top:8px">
+<label class="btn" style="margin:0;color:var(--ink);font-size:16px">Photographier la signature<input type="file" id="fSig" accept="image/*" capture="environment" class="cache"></label>
+<label class="btn" style="margin:0;color:var(--ink);font-size:16px">Galerie<input type="file" id="fSigGal" accept="image/*" class="cache"></label>
+</div>
+<p class="msg" id="sigMsg"></p>
+</div>
+</div>
+
+<div class="card apercu">
+<h2>Aperçu du badge</h2>
+<div id="apercu"></div>
+</div>
+<div class="card"><button class="d" id="btnSuppr">Supprimer cet employé</button></div>
+</main>
+<div class="barre cache" id="barreFiche">
+<button id="btnAnnuler">Retour</button>
+<button class="p" id="btnEnreg">Enregistrer</button>
+</div>
+
+<dialog id="dlg"><p id="dlgTxt"></p><div class="row" style="justify-content:flex-end"><button id="dlgNon">Annuler</button><button class="d" id="dlgOui">Supprimer</button></div></dialog>
+
+<script src="lib/jspdf.umd.min.js"></script>
+<script src="lib/qrcode.js"></script>
+<script src="js/signature.js"></script>
+<script src="js/badge.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
