@@ -25,13 +25,18 @@
     sauverReglages: function (r) { return tx('reglages', 'readwrite', function (s) { s.put(r, 'r'); }); }
   };
 
-  var R = { ministere: "MINISTÈRE DE L'ÉNERGIE", ville: 'NIAMEY', prefixe: 'ME-' + new Date().getFullYear() + '-', validite: 2, photo: true };
+  var CHAMPS_STD = { fonction: 'Fonction', numero: 'Carte N°' };
+  var R = { ministere: "MINISTÈRE DE L'ÉNERGIE", ville: 'NIAMEY', prefixe: 'ME-' + new Date().getFullYear() + '-', validite: 2, photo: true,
+    champs: [{ id: 'fonction', libelle: 'Fonction', std: true }, { id: 'numero', libelle: 'Carte N°', std: true }],
+    autorite: { titre: '', nom: '' } };
   var employes = [], coches = {}, courant = null;
 
   function auj() { var d = new Date(); return d.toISOString().slice(0, 10); }
   function plusAns(iso, n) { var d = new Date(iso + 'T12:00:00'); d.setFullYear(d.getFullYear() + Number(n || 1)); return d.toISOString().slice(0, 10); }
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
-  function params() { return { ministere: R.ministere, ville: R.ville, photo: R.photo }; }
+  function params() { return { ministere: R.ministere, ville: R.ville, photo: R.photo, champs: R.champs, autorite: R.autorite }; }
+  function aChamp(id) { return R.champs.some(function (c) { return c.id === id; }); }
+  function persos() { return R.champs.filter(function (c) { return !c.std; }); }
 
   function prochainNumero() {
     var max = 0;
@@ -81,7 +86,12 @@
     courant = e ? JSON.parse(JSON.stringify(e)) : { id: 'e' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), numero: prochainNumero(), delivrance: auj(), validite: plusAns(auj(), R.validite) };
     courant._neuf = neuf;
     $('titreFiche').textContent = neuf ? 'Nouvel employé' : 'Modifier la fiche';
+    courant.extra = courant.extra || {};
     ['Nom', 'Prenom', 'Fonction', 'Numero', 'Delivrance', 'Validite', 'Badge'].forEach(function (k) { $('f' + k).value = courant[k.toLowerCase()] || ''; });
+    $('wFonction').classList.toggle('cache', !aChamp('fonction')); $('wNumero').classList.toggle('cache', !aChamp('numero'));
+    $('champsPerso').innerHTML = persos().map(function (c) {
+      return '<div><label for="x_' + c.id + '">' + esc(c.libelle) + '</label><input id="x_' + c.id + '" data-x="' + c.id + '" autocomplete="off" value="' + esc(courant.extra[c.id] || '') + '"></div>';
+    }).join('');
     $('btnSuppr').parentNode.classList.toggle('cache', neuf);
     photoSrc = null; $('cropBox').classList.add('cache');
     sigSrc = courant.signatureSource || null; sigRot = courant.sigRot || 0;
@@ -91,7 +101,10 @@
   }
   function lireForm() {
     ['Nom', 'Prenom', 'Fonction', 'Numero', 'Delivrance', 'Validite', 'Badge'].forEach(function (k) { courant[k.toLowerCase()] = $('f' + k).value.trim(); });
+    courant.extra = courant.extra || {};
+    document.querySelectorAll('#champsPerso input[data-x]').forEach(function (i) { courant.extra[i.dataset.x] = i.value.trim(); });
   }
+  $('champsPerso').addEventListener('input', function () { lireForm(); apercu(); });
   ['fNom', 'fPrenom', 'fFonction', 'fNumero', 'fDelivrance', 'fValidite'].forEach(function (id) { $(id).addEventListener('input', function () { lireForm(); apercu(); }); });
   $('fDelivrance').addEventListener('change', function () { if ($('fDelivrance').value) { $('fValidite').value = plusAns($('fDelivrance').value, R.validite); lireForm(); apercu(); } });
 
@@ -100,7 +113,7 @@
   $('btnEnreg').onclick = async function () {
     lireForm();
     if (!courant.nom || !courant.prenom) { alerte('Indiquez au moins le nom et le prénom.'); return; }
-    if (!courant.numero) { alerte('Indiquez le numéro de carte.'); return; }
+    if (!courant.numero) { if (aChamp('numero')) { alerte('Indiquez le numéro de carte.'); return; } courant.numero = prochainNumero(); }
     var double = employes.find(function (e) { return e.numero === courant.numero && e.id !== courant.id; });
     if (double) { alerte('Ce numéro de carte est déjà utilisé par ' + double.nom + ' ' + double.prenom + '.'); return; }
     if (photoSrc) courant.photo = exporterRecadrage();
@@ -110,15 +123,16 @@
     if (i >= 0) employes[i] = e; else { employes.push(e); coches[e.id] = true; }
     trier(); afficherListe(); vue(false);
   };
-  $('btnSuppr').onclick = function () {
-    $('dlgTxt').textContent = 'Supprimer ' + (courant.nom || '') + ' ' + (courant.prenom || '') + ' ? Cette action est définitive.';
-    $('dlg').showModal();
-  };
+  var dlgAction = null;
+  function confirmer(texte, bouton, fn) { $('dlgTxt').textContent = texte; $('dlgOui').textContent = bouton; dlgAction = fn; $('dlg').showModal(); }
   $('dlgNon').onclick = function () { $('dlg').close(); };
-  $('dlgOui').onclick = async function () {
-    $('dlg').close(); await DB.suppr(courant.id);
-    employes = employes.filter(function (e) { return e.id !== courant.id; }); delete coches[courant.id];
-    afficherListe(); vue(false);
+  $('dlgOui').onclick = function () { $('dlg').close(); if (dlgAction) dlgAction(); };
+  $('btnSuppr').onclick = function () {
+    confirmer('Supprimer ' + (courant.nom || '') + ' ' + (courant.prenom || '') + ' ? Cette action est définitive.', 'Supprimer', async function () {
+      await DB.suppr(courant.id);
+      employes = employes.filter(function (e) { return e.id !== courant.id; }); delete coches[courant.id];
+      afficherListe(); vue(false);
+    });
   };
   function alerte(t) { showToast(t); }
   function showToast(t) {
@@ -266,8 +280,9 @@
   };
   $('expCsv').onclick = function () {
     var l = choisis(); if (!l) return;
-    var lignes = [['N° carte', 'Nom', 'Prénom', 'Fonction', 'Délivrée le', 'Valable jusqu\'au', 'N° badge (lecteur)']].concat(l.map(function (e) {
-      return [e.numero, (e.nom || '').toUpperCase(), e.prenom, e.fonction, Badge.dateFr(e.delivrance), Badge.dateFr(e.validite), e.badge || ''];
+    var px = persos();
+    var lignes = [['N° carte', 'Nom', 'Prénom', 'Fonction'].concat(px.map(function (c) { return c.libelle; }), ['Délivrée le', 'Valable jusqu\'au', 'N° badge (lecteur)'])].concat(l.map(function (e) {
+      return [e.numero, (e.nom || '').toUpperCase(), e.prenom, e.fonction].concat(px.map(function (c) { return (e.extra || {})[c.id] || ''; }), [Badge.dateFr(e.delivrance), Badge.dateFr(e.validite), e.badge || '']);
     }));
     var csv = '﻿' + lignes.map(function (r) { return r.map(function (v) { v = String(v == null ? '' : v); return /[;"\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }).join(';'); }).join('\r\n');
     livrer(new Blob([csv], { type: 'text/csv;charset=utf-8' }), nomFichier('liste_badges', 'csv'));
@@ -285,11 +300,89 @@
       if (d.app !== 'badges_ministere' || !Array.isArray(d.employes)) throw new Error('Ce fichier n\'est pas une sauvegarde de cette application.');
       var ajout = 0;
       for (var i = 0; i < d.employes.length; i++) { await DB.mettre(d.employes[i]); ajout++; }
-      if (d.reglages) { R = Object.assign(R, d.reglages); await DB.sauverReglages(R); afficherReglages(); }
+      if (d.reglages) { R = Object.assign(R, d.reglages); await DB.sauverReglages(R); location.reload(); return; }
       employes = await DB.tous(); trier(); afficherListe();
       $('msgExport').className = 'msg okm'; $('msgExport').textContent = ajout + ' fiche(s) restaurée(s).';
     } catch (e) { $('msgExport').className = 'msg err'; $('msgExport').textContent = e.message; }
   };
+
+  /* ---------- champs de la carte ---------- */
+  function afficherChamps() {
+    var h = '<div class="emp" style="padding:8px 0"><div class="info"><b>Nom</b><span>toujours sur la carte</span></div></div>' +
+      '<div class="emp" style="padding:8px 0"><div class="info"><b>Prénom</b><span>toujours sur la carte</span></div></div>';
+    h += R.champs.map(function (c, i) {
+      return '<div class="emp" style="padding:8px 0"><div class="info"><b>' + esc(c.libelle) + '</b><span>' + (c.std ? 'champ de base' : 'champ ajouté') + '</span></div>' +
+        (i ? '<button data-haut="' + i + '" aria-label="Monter ' + esc(c.libelle) + '">↑</button>' : '') +
+        '<button class="d" data-retirer="' + i + '">Retirer</button></div>';
+    }).join('');
+    var absents = Object.keys(CHAMPS_STD).filter(function (k) { return !aChamp(k); });
+    if (absents.length) h += '<div class="row" style="margin-top:8px">' + absents.map(function (k) { return '<button data-remettre="' + k + '">Remettre « ' + CHAMPS_STD[k] + ' »</button>'; }).join('') + '</div>';
+    $('listeChamps').innerHTML = h;
+  }
+  function sauverChamps(msg) { DB.sauverReglages(R); afficherChamps(); $('msgChamps').className = 'msg okm'; $('msgChamps').textContent = msg || ''; }
+  $('listeChamps').addEventListener('click', function (ev) {
+    var b = ev.target.closest('button'); if (!b) return;
+    if (b.dataset.retirer !== undefined) {
+      var c = R.champs[Number(b.dataset.retirer)];
+      confirmer('Retirer le champ « ' + c.libelle + ' » de la carte et des fiches ?' + (c.std ? '' : ' Les valeurs déjà saisies pour ce champ seront perdues.'), 'Retirer', function () {
+        R.champs.splice(R.champs.indexOf(c), 1);
+        if (!c.std) employes.forEach(function (e) { if (e.extra && c.id in e.extra) { delete e.extra[c.id]; DB.mettre(e); } });
+        sauverChamps('Champ « ' + c.libelle + ' » retiré.');
+      });
+    } else if (b.dataset.haut !== undefined) {
+      var i = Number(b.dataset.haut), t = R.champs[i]; R.champs[i] = R.champs[i - 1]; R.champs[i - 1] = t; sauverChamps('Ordre modifié.');
+    } else if (b.dataset.remettre) {
+      R.champs.push({ id: b.dataset.remettre, libelle: CHAMPS_STD[b.dataset.remettre], std: true }); sauverChamps('Champ remis.');
+    }
+  });
+  $('btnAjoutChamp').onclick = function () {
+    var nom = $('nouveauChamp').value.trim();
+    if (!nom) { $('msgChamps').className = 'msg err'; $('msgChamps').textContent = 'Écrivez le nom du champ à ajouter.'; return; }
+    var deja = ['nom', 'prénom', 'prenom'].concat(R.champs.map(function (c) { return c.libelle.toLowerCase(); }));
+    if (deja.indexOf(nom.toLowerCase()) >= 0) { $('msgChamps').className = 'msg err'; $('msgChamps').textContent = 'Ce champ existe déjà.'; return; }
+    if (R.champs.length >= 6) { $('msgChamps').className = 'msg err'; $('msgChamps').textContent = 'Six champs au maximum, en plus du nom et du prénom : sinon le texte devient trop petit sur la carte.'; return; }
+    R.champs.push({ id: 'c' + Date.now().toString(36), libelle: nom });
+    $('nouveauChamp').value = ''; sauverChamps('Champ « ' + nom + ' » ajouté : remplissez-le dans chaque fiche.');
+  };
+
+  /* ---------- signature et cachet de l'autorité ---------- */
+  function capture(boite, cle, titre, aide, finesseDefaut) {
+    var A = R.autorite, p = cle;
+    boite.innerHTML = '<h3 style="font-size:15px;margin:0 0 6px">' + titre + '</h3><div class="zone">' +
+      '<div class="damier" id="' + p + 'Ap"></div>' +
+      '<div id="' + p + 'Reg" class="cache"><div class="grid2"><div><label for="' + p + 'Fin">Finesse des traits</label><input type="range" id="' + p + 'Fin" min="1" max="9"></div>' +
+      '<div><label for="' + p + 'For">Encre plus foncée</label><input type="range" id="' + p + 'For" min="80" max="160"></div></div>' +
+      '<div class="row" style="justify-content:center"><button id="' + p + 'Rot">Pivoter ↻</button><button class="d" id="' + p + 'Del">Retirer</button></div></div>' +
+      '<div class="row" style="justify-content:center;margin-top:8px"><label class="btn" style="margin:0;color:var(--ink);font-size:16px">Photographier<input type="file" accept="image/*" capture="environment" class="cache" id="' + p + 'Cam"></label>' +
+      '<label class="btn" style="margin:0;color:var(--ink);font-size:16px">Galerie<input type="file" accept="image/*" class="cache" id="' + p + 'Gal"></label></div>' +
+      '<p class="msg" id="' + p + 'Msg"></p></div>';
+    var timer = null;
+    function montrer() {
+      $(p + 'Ap').innerHTML = A[cle] ? '<img src="' + A[cle] + '" alt="' + titre + '">' : '<span class="astuce">' + aide + '</span>';
+      $(p + 'Reg').classList.toggle('cache', !A[cle + 'Source']);
+      $(p + 'Fin').value = A[cle + 'Fin'] || finesseDefaut; $(p + 'For').value = A[cle + 'For'] || 115;
+    }
+    async function traiter() {
+      if (!A[cle + 'Source']) return;
+      $(p + 'Msg').className = 'msg'; $(p + 'Msg').textContent = 'Traitement…';
+      await new Promise(function (r) { setTimeout(r, 30); });
+      var res = await Signature.detourer(A[cle + 'Source'], { finesse: Number($(p + 'Fin').value), force: Number($(p + 'For').value), rot: A[cle + 'Rot'] || 0 });
+      if (res.erreur) { $(p + 'Msg').className = 'msg err'; $(p + 'Msg').textContent = res.erreur; return; }
+      A[cle] = res.png; A[cle + 'Fin'] = Number($(p + 'Fin').value); A[cle + 'For'] = Number($(p + 'For').value);
+      await DB.sauverReglages(R); montrer();
+      $(p + 'Msg').className = 'msg okm'; $(p + 'Msg').textContent = 'Enregistré : imprimé au verso de toutes les cartes.';
+    }
+    async function charger(f) { if (!f) return; A[cle + 'Source'] = await reduire(await lireFichier(f), 1600); A[cle + 'Rot'] = 0; montrer(); traiter(); }
+    $(p + 'Cam').onchange = function () { charger(this.files[0]); this.value = ''; };
+    $(p + 'Gal').onchange = function () { charger(this.files[0]); this.value = ''; };
+    [p + 'Fin', p + 'For'].forEach(function (id) { $(id).oninput = function () { clearTimeout(timer); timer = setTimeout(traiter, 250); }; });
+    $(p + 'Rot').onclick = function () { A[cle + 'Rot'] = ((A[cle + 'Rot'] || 0) + 90) % 360; traiter(); };
+    $(p + 'Del').onclick = function () { A[cle] = null; A[cle + 'Source'] = null; DB.sauverReglages(R); montrer(); $(p + 'Msg').textContent = ''; };
+    montrer();
+  }
+  ['aTitre', 'aNom'].forEach(function (id) {
+    $(id).addEventListener('change', function () { R.autorite.titre = $('aTitre').value.trim(); R.autorite.nom = $('aNom').value.trim(); DB.sauverReglages(R); });
+  });
 
   /* ---------- réglages ---------- */
   function afficherReglages() {
@@ -307,7 +400,12 @@
   /* ---------- démarrage ---------- */
   (async function () {
     try { var r = await DB.reglages(); if (r) R = Object.assign(R, r); } catch (e) {}
-    afficherReglages();
+    if (!Array.isArray(R.champs)) R.champs = [{ id: 'fonction', libelle: 'Fonction', std: true }, { id: 'numero', libelle: 'Carte N°', std: true }];
+    R.autorite = R.autorite || { titre: '', nom: '' };
+    afficherReglages(); afficherChamps();
+    $('aTitre').value = R.autorite.titre || ''; $('aNom').value = R.autorite.nom || '';
+    capture($('capSig'), 'signature', "Signature de l'autorité", "L'autorité signe au stylo noir sur une feuille blanche, puis photographiez la signature.", 5);
+    capture($('capCachet'), 'cachet', 'Cachet (tampon), facultatif', 'Tamponnez sur une feuille blanche, puis photographiez le cachet.', 7);
     employes = await DB.tous(); trier();
     employes.forEach(function (e) { coches[e.id] = true; });
     afficherListe();

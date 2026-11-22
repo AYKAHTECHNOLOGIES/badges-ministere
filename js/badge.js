@@ -67,8 +67,13 @@
     return c;
   }
 
+  function valeur(e, c) { return c.std ? (e[c.id] || '') : ((e.extra || {})[c.id] || ''); }
+  function champs(p) { return p.champs || [{ id: 'fonction', libelle: 'Fonction', std: true }, { id: 'numero', libelle: 'Carte N°', std: true }]; }
   function texteQR(e, p) {
-    return [p.ministere + ' - REPUBLIQUE DU NIGER', 'Carte N: ' + (e.numero || ''), ((e.nom || '').toUpperCase() + ' ' + (e.prenom || '')).trim(), e.fonction || '', 'Valable jusqu\'au: ' + dateFr(e.validite)].join('\n');
+    var l = [p.ministere + ' - REPUBLIQUE DU NIGER', 'Carte N: ' + (e.numero || ''), ((e.nom || '').toUpperCase() + ' ' + (e.prenom || '')).trim()];
+    champs(p).forEach(function (c) { if (c.id !== 'numero' && valeur(e, c)) l.push(c.libelle + ': ' + valeur(e, c)); });
+    l.push('Valable jusqu\'au: ' + dateFr(e.validite));
+    return l.join('\n');
   }
 
   function dateFr(d) { if (!d) return ''; var p = String(d).split('-'); return p.length === 3 ? p[2] + '/' + p[1] + '/' + p[0] : d; }
@@ -95,11 +100,13 @@
       xg = 84;
     }
     var maxW = 262 - xg - 6;
-    var champs = [['NOM', (e.nom || '').toUpperCase(), 10, true, ENCRE], ['PRÉNOM', e.prenom || '', 9.5, false, ENCRE], ['FONCTION', e.fonction || '', 8.5, false, ENCRE], ['CARTE N°', e.numero || '', 9.5, true, VERT]];
-    champs.forEach(function (ch, i) {
-      var y = 74 + i * 19;
-      texte(cx, ch[0], xg, y, 6, maxW, { gras: true, couleur: GRIS, esp: 0.08 });
-      texte(cx, ch[1], xg, y + 9, ch[2], maxW, { gras: true, couleur: ch[4] });
+    var rangs = [['NOM', (e.nom || '').toUpperCase(), 10, ENCRE], ['PRÉNOM', e.prenom || '', 9.5, ENCRE]];
+    champs(p).forEach(function (c) { rangs.push([c.libelle.toUpperCase(), valeur(e, c), c.id === 'numero' ? 9.5 : 8.5, c.id === 'numero' ? VERT : ENCRE]); });
+    var pas = Math.min(19, 114 / rangs.length), k = pas / 19, y0 = 70 + (114 - pas * rangs.length) / 2 + 4 * k;
+    rangs.forEach(function (ch, i) {
+      var y = y0 + i * pas;
+      texte(cx, ch[0], xg, y, Math.max(4.5, 6 * k), maxW, { gras: true, couleur: GRIS, esp: 0.08 });
+      texte(cx, ch[1], xg, y + 9 * k, Math.max(5.5, ch[2] * k), maxW, { gras: true, couleur: ch[3] });
     });
     cx.imageSmoothingEnabled = false;
     cx.drawImage(qrCanvas(texteQR(e, p)), 262, 122, 50, 50);
@@ -131,7 +138,13 @@
     cx.strokeStyle = '#8a8f96'; cx.lineWidth = 0.6;
     cx.beginPath(); cx.moveTo(14, 192); cx.lineTo(164, 192); cx.stroke();
     cx.strokeRect(180, y0 - 4, 130, 196 - y0);
-    texte(cx, "Signature et cachet de l'autorité", 245, y0 + 3, 6, 124, { align: 'center', couleur: GRIS });
+    var A = p.autorite || {};
+    texte(cx, A.titre || "Signature et cachet de l'autorité", 245, y0 + 3, A.titre ? 6.5 : 6, 124, { align: 'center', gras: !!A.titre, couleur: A.titre ? ENCRE : GRIS });
+    var bas = A.nom ? 184 : 191, haut = y0 + 9;
+    var cachet = await img(A.cachet), sa = await img(A.signature);
+    if (cachet) { cx.save(); cx.globalAlpha = 0.85; contenir(cx, cachet, 196, haut, 98, bas - haut); cx.restore(); }
+    if (sa) contenir(cx, sa, 186, haut + 4, 118, bas - haut - 6);
+    if (A.nom) texte(cx, A.nom, 245, 188, 6.5, 124, { align: 'center', gras: true });
     drapeau(cx, 200);
     return c;
   }

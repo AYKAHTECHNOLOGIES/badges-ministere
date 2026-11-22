@@ -95,6 +95,28 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
 </div>
 
 <div class="card">
+<h2>Champs de la carte</h2>
+<p class="astuce" style="margin-top:0">Nom et prénom sont toujours sur la carte. Ajoutez ou retirez les autres champs : ils s'appliquent à toutes les fiches.</p>
+<div id="listeChamps"></div>
+<div class="row" style="margin-top:10px">
+<input id="nouveauChamp" class="grow" placeholder="Ex. : Matricule, Service, Groupe sanguin…" aria-label="Nom du nouveau champ" style="flex:1;min-width:180px">
+<button class="p" id="btnAjoutChamp">+ Ajouter le champ</button>
+</div>
+<p class="msg" id="msgChamps"></p>
+</div>
+
+<div class="card">
+<h2>Signature de l'autorité</h2>
+<p class="astuce" style="margin-top:0">Elle est imprimée au verso de toutes les cartes, dans le cadre de l'autorité.</p>
+<label for="aTitre">Titre de l'autorité (au-dessus de la signature)</label>
+<input id="aTitre" placeholder="Ex. : Le Secrétaire Général">
+<label for="aNom">Nom de l'autorité (sous la signature, facultatif)</label>
+<input id="aNom">
+<div id="capSig" style="margin-top:12px"></div>
+<div id="capCachet" style="margin-top:12px"></div>
+</div>
+
+<div class="card">
 <h2>Sauvegarde et réglages</h2>
 <div class="row">
 <button class="grow" id="btnSauver">Enregistrer une sauvegarde</button>
@@ -117,8 +139,9 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
 <div class="grid2">
 <div><label for="fNom">Nom</label><input id="fNom" autocomplete="off" autocapitalize="characters"></div>
 <div><label for="fPrenom">Prénom</label><input id="fPrenom" autocomplete="off" autocapitalize="words"></div>
-<div><label for="fFonction">Fonction</label><input id="fFonction" autocomplete="off"></div>
-<div><label for="fNumero">Carte N°</label><input id="fNumero" autocomplete="off"></div>
+<div id="wFonction"><label for="fFonction" id="lFonction">Fonction</label><input id="fFonction" autocomplete="off"></div>
+<div id="wNumero"><label for="fNumero" id="lNumero">Carte N°</label><input id="fNumero" autocomplete="off"></div>
+<div id="champsPerso" style="display:contents"></div>
 <div><label for="fDelivrance">Délivrée le</label><input id="fDelivrance" type="date"></div>
 <div><label for="fValidite">Valable jusqu'au</label><input id="fValidite" type="date"></div>
 <div><label for="fBadge">N° du badge lu par le lecteur (facultatif)</label><input id="fBadge" inputmode="numeric" autocomplete="off"></div>
